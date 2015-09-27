@@ -5,13 +5,14 @@ import csv
 import numpy as np
 
 TRAIN_FILENAME = 'train.csv'
+SUBMISSION_FILENAME = 'submission.csv'
 
 
 def read_train(f):
     """
     Reads train data
     :param f: csv file containing rows of image number - whale type pairs
-    :rtype : numpy array of image number - whale id pairs and array from whale id to whale type
+    :rtype : numpy array of image number - whale id pairs and whale types numpy array
     """
     reader = csv.reader(f)
 
@@ -28,15 +29,15 @@ def read_train(f):
         image_ids_whale_types.append((int(row[0][2:-4]), row[1]))
         whale_types.add(row[1])
 
-    whale_type_to_id = dict(zip(whale_types, range(0, len(whale_types))))
+    whale_types_list = list(whale_types)
+    whale_type_to_id = dict(zip(whale_types_list, range(0, len(whale_types))))
     image_ids_whale_ids = [(image_id, whale_type_to_id[whale_type]) for image_id, whale_type in image_ids_whale_types]
-    whale_id_to_type = dict((whale_id, whale_type) for whale_type, whale_id in whale_type_to_id.iteritems())
-    return np.array(image_ids_whale_ids), whale_id_to_type
+    return np.array(image_ids_whale_ids), np.array(whale_types_list)
 
 
 def main():
     with open(TRAIN_FILENAME) as train_data_file:
-        image_ids_whale_ids, whale_id_to_type = read_train(train_data_file)
+        image_ids_whale_ids, whale_types = read_train(train_data_file)
 
     return 0
 
