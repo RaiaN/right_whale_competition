@@ -12,7 +12,7 @@ from collections import defaultdict
 
 IMAGES_DIR = "imgs/"
 OUTPUT_DIR = "filtered/"
-CLUSTERS = 30
+CLUSTERS = 16
 
 def calc_cluster_mean_color(img, clusters_mask):
     clusters_colors = [0] * (CLUSTERS+1)
@@ -20,7 +20,7 @@ def calc_cluster_mean_color(img, clusters_mask):
 
     for row_ind, row in enumerate(clusters_mask):
         for col_ind, cluster_id in enumerate(row):
-            clusters_colors[cluster_id] += img[row_ind][col_ind]
+            clusters_colors[cluster_id] += sum(img[row_ind][col_ind])
             cluster_size[cluster_id] += 1
 
     for cluster_id in range(CLUSTERS):
@@ -135,7 +135,7 @@ def main():
             print("\nImage size: %s Kb" % filesize)    
             
             print("Reading the image %s..." % filename)
-            image = color.rgb2gray(imread(IMAGES_DIR + filename))
+            image = imread(IMAGES_DIR + filename)
             print("Kmeans...")
             clusters_mask = slic(image, n_segments=CLUSTERS, multichannel=False)
 
