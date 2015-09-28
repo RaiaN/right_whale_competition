@@ -111,14 +111,19 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
     return meta_clusters
 
 
-def get_border_from_meta_clusters(meta_clusters):
-    print(meta_clusters)
+def recolor_image(image, clusters_mask, meta_clusters):
+    row_count, col_count = image.shape
+    for meta_cluster in meta_clusters:
+        for row_ind in range(row_count):
+            for col_ind in range(col_count):
+                if clusters_mask[row_ind][col_ind] in meta_cluster:
+                    image[row_ind][col_ind] = 0.0
 
 
 def main():
     for _, _, img_filenames in os.walk(IMAGES_DIR):
         for filename in img_filenames:
-            output_filename = OUTPUT_DIR + filename + ".kmeans40.jpg"
+            output_filename = OUTPUT_DIR + filename + ".kmeans35.jpg"
             if os.path.exists(output_filename):
                 continue
             
@@ -134,18 +139,20 @@ def main():
             print("\nReading the image...")
             image = color.rgb2gray(imread(IMAGES_DIR + filename))
             print("Kmeans...")
-            mask = slic(image, n_segments=CLUSTERS)
+            clusters_mask = slic(image, n_segments=CLUSTERS)
 
             print("Calculating clusters mean color...")
-            clusters_colors, THRESHOLD = calc_cluster_mean_color(image, mask)
+            clusters_colors, THRESHOLD = calc_cluster_mean_color(image, clusters_mask)
             print("THRESHOLD for merging: %s" % THRESHOLD)
 
             print("Building clusters adjacency map...")        
-            amap = build_clusters_adjacency_map(mask)  
+            amap = build_clusters_adjacency_map(clusters_mask)  
             print("Merging clusters...") 
-            meta_clusters = merge_clusters(amap, mask, clusters_colors, THRESHOLD)
-            print("Getting border to crop image...")
-            get_border_from_meta_clusters(meta_clusters)
+            meta_clusters = merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD)
+            print("Recoloring the image...")
+            recolor_image(image, clusters_mask, meta_clusters)
+            print("Saving...")
+            imsave(output_filename, image)
 
 
 
