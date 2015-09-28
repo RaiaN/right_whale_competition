@@ -2,11 +2,9 @@
 
 import numpy as np
 import os
-from matplotlib import pyplot as plt
-from scipy import ndimage as ndi
 from skimage.io import imread, imsave
-from skimage import color, img_as_float
-from skimage.filters.rank import autolevel, autolevel_percentile, median, mean, mean_bilateral, entropy
+from skimage import color
+from skimage.filters.rank import median, mean, mean_bilateral
 from skimage.morphology import disk
 
 
@@ -17,7 +15,7 @@ def main():
     for _, _, img_filenames in os.walk(IMAGES_DIR):
         for ind, filename in enumerate(img_filenames):
             print("Reading the image...")
-            image = img_as_float(color.rgb2gray(imread(IMAGES_DIR + filename)))
+            image = color.rgb2gray(imread(IMAGES_DIR + filename))
 
             subdir = OUTPUT_DIR + str(ind) + "/"
             try:
