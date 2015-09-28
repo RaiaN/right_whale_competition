@@ -13,22 +13,27 @@ from collections import defaultdict
 IMAGES_DIR = "imgs/"
 OUTPUT_DIR = "filtered/"
 CLUSTERS = 35
-THRESHOLD = 0.05
 
 def calc_cluster_mean_color(img, clusters_mask):
-    cluster_color = [0] * CLUSTERS
+    clusters_colors = [0] * CLUSTERS
     cluster_size = [0] * CLUSTERS
 
     for row_ind, row in enumerate(clusters_mask):
         for col_ind, cluster_id in enumerate(row):
-            cluster_color[cluster_id] += img[row_ind][col_ind]
+            clusters_colors[cluster_id] += img[row_ind][col_ind]
             cluster_size[cluster_id] += 1
 
     for cluster_id in range(CLUSTERS):
         if cluster_size[cluster_id] > 0: 
-            cluster_color[cluster_id] /= cluster_size[cluster_id]
+            clusters_colors[cluster_id] /= cluster_size[cluster_id]
 
-    return cluster_color
+    color_diff = []
+    for color1 in clusters_colors:
+        for color2 in clusters_colors:
+            if color1 != color2:
+                color_diff.append(abs(color1 - color2))
+
+    return clusters_colors, np.median(color_diff) + np.std(color_diff)
 
 
 def build_clusters_adjacency_map(clusters_mask):
@@ -64,11 +69,11 @@ def build_clusters_adjacency_map(clusters_mask):
     return amap
 
 
-def significant_diff(x, y, cluster_color):
-    return cluster_color[x] - cluster_color[y] > THRESHOLD 
+def significant_diff(x, y, clusters_colors, THRESHOLD):
+    return abs(clusters_colors[x] - clusters_colors[y]) > THRESHOLD
 
 
-def merge_clusters(amap, clusters_mask, cluster_color):
+def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
     TL = clusters_mask[0][0]   
     TR = clusters_mask[0][-1]
     BL = clusters_mask[-1][0]
@@ -76,21 +81,26 @@ def merge_clusters(amap, clusters_mask, cluster_color):
     meta_clusters = []
 
     start_clusters = [TL, TR, BL, BR]
-    while len(start_clusters) > 0:
+    while start_clusters:
         meta_cluster = [] 
         start_cluster = start_clusters.pop(0)  
         processing = [start_cluster]
+        visited = set()        
 
-        while len(processing) > 0:
+        while processing:
             curr_cluster = processing.pop(0)
-            if not large_cluster or not significant_diff(start_cluster, curr_cluster, cluster_color):
+            visited.add(curr_cluster)
+
+            if not meta_cluster or not significant_diff(start_cluster, curr_cluster, clusters_colors, THRESHOLD):
                 meta_cluster.append(curr_cluster)
 
-            adj_clusters = amap[start]
+            adj_clusters = amap[curr_cluster]
             for adj_cluster in adj_clusters:
+                if adj_cluster in visited:
+                    continue
                 processing.append(adj_cluster)
 
-        meta_clusters.append(meta_cluster)
+        meta_clusters.append(list(set(meta_cluster)))
 
     return meta_clusters
 
@@ -116,12 +126,14 @@ def main():
             mask = slic(image, n_segments=CLUSTERS)
 
             print("Calculating clusters mean color...")
-            cluster_color = calc_cluster_mean_color(image, mask)
-            #print(cluster_color)
+            clusters_colors, THRESHOLD = calc_cluster_mean_color(image, mask)
+            print("THRESHOLD for merging: %s" % THRESHOLD)
 
-            print("Building clustes adjacency map...")        
-            amap, TL, TR, BL, BR = build_clusters_adjacency_map(mask)   
-            large_clusters = merge_clusters(amap, mask, cluster_color)
+            print("Building clusters adjacency map...")        
+            amap = build_clusters_adjacency_map(mask)  
+            print("Merging clusters...") 
+            meta_clusters = merge_clusters(amap, mask, clusters_colors, THRESHOLD)
+            print(meta_clusters)
 
 
 
