@@ -5,18 +5,18 @@ import numpy as np
 import os
 from skimage.io import imread, imsave
 from skimage import color, img_as_float
-from skimage.segmentation import slic, find_boundaries, mark_boundaries
+from skimage.segmentation import slic, find_boundaries
 from matplotlib import pyplot as pl
 from collections import defaultdict
 
 
 IMAGES_DIR = "imgs/"
 OUTPUT_DIR = "filtered/"
-CLUSTERS = 35
+CLUSTERS = 30
 
 def calc_cluster_mean_color(img, clusters_mask):
-    clusters_colors = [0] * CLUSTERS
-    cluster_size = [0] * CLUSTERS
+    clusters_colors = [0] * (CLUSTERS+1)
+    cluster_size = [0] * (CLUSTERS+1)
 
     for row_ind, row in enumerate(clusters_mask):
         for col_ind, cluster_id in enumerate(row):
@@ -27,13 +27,7 @@ def calc_cluster_mean_color(img, clusters_mask):
         if cluster_size[cluster_id] > 0: 
             clusters_colors[cluster_id] /= cluster_size[cluster_id]
 
-    color_diff = []
-    for color1 in clusters_colors:
-        for color2 in clusters_colors:
-            if color1 != color2:
-                color_diff.append(abs(color1 - color2))
-
-    return clusters_colors, np.median(color_diff) + np.std(color_diff)
+    return clusters_colors
 
 
 def build_clusters_adjacency_map(clusters_mask):
@@ -69,18 +63,22 @@ def build_clusters_adjacency_map(clusters_mask):
     return amap
 
 
-def significant_diff(x, y, THRESHOLD):
-    return abs(x - y) > THRESHOLD
+def significant_diff(x, y):
+    return abs(x - y) > 0.01
 
 
-def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
+def merge_clusters(amap, clusters_mask, clusters_colors):
     TL = clusters_mask[0][0]   
     TR = clusters_mask[0][-1]
     BL = clusters_mask[-1][0]
     BR = clusters_mask[-1][-1]  
+    EX1 = clusters_mask[0][int(clusters_mask.shape[1]/2)]
+    EX2 = clusters_mask[int(clusters_mask.shape[0]/2)][0]
+    EX3 = clusters_mask[-1][int(clusters_mask.shape[1]/2)]
+    EX4 = clusters_mask[int(clusters_mask.shape[0]/2)][-1]
     meta_clusters = []
 
-    start_clusters = [TL, TR, BL, BR]
+    start_clusters = [TL, TR, BL, BR, EX1, EX2, EX3, EX4]
     while start_clusters:
         meta_cluster = set()
         start_cluster = start_clusters.pop(0)  
@@ -91,7 +89,7 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
             curr_cluster = processing.pop(0)
             visited.add(curr_cluster)
 
-            if not meta_cluster or not significant_diff( clusters_colors[start_cluster], clusters_colors[curr_cluster], THRESHOLD):
+            if not meta_cluster or not significant_diff(clusters_colors[start_cluster], clusters_colors[curr_cluster]):
                 meta_cluster.add(curr_cluster)                
 
             adj_clusters = amap[curr_cluster]
@@ -112,7 +110,7 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
 
 
 def recolor_image(image, clusters_mask, meta_clusters):
-    row_count, col_count = image.shape
+    row_count, col_count = image.shape[:2]
     for meta_cluster in meta_clusters:
         for row_ind in range(row_count):
             for col_ind in range(col_count):
@@ -134,21 +132,19 @@ def main():
                     outp.write(filename + "\n")
                 continue
 
-            print("Image size: %s" % filesize)    
+            print("\nImage size: %s Kb" % filesize)    
             
-            print("\nReading the image...")
+            print("Reading the image %s..." % filename)
             image = color.rgb2gray(imread(IMAGES_DIR + filename))
             print("Kmeans...")
             clusters_mask = slic(image, n_segments=CLUSTERS)
 
             print("Calculating clusters mean color...")
-            clusters_colors, THRESHOLD = calc_cluster_mean_color(image, clusters_mask)
-            print("THRESHOLD for merging: %s" % THRESHOLD)
-
+            clusters_colors = calc_cluster_mean_color(image, clusters_mask)
             print("Building clusters adjacency map...")        
             amap = build_clusters_adjacency_map(clusters_mask)  
             print("Merging clusters...") 
-            meta_clusters = merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD)
+            meta_clusters = merge_clusters(amap, clusters_mask, clusters_colors)
             print("Recoloring the image...")
             recolor_image(image, clusters_mask, meta_clusters)
             print("Saving...")
