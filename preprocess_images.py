@@ -137,7 +137,7 @@ def main():
             print("Reading the image %s..." % filename)
             image = color.rgb2gray(imread(IMAGES_DIR + filename))
             print("Kmeans...")
-            clusters_mask = slic(image, n_segments=CLUSTERS)
+            clusters_mask = slic(image, n_segments=CLUSTERS, multichannel=False)
 
             print("Calculating clusters mean color...")
             clusters_colors = calc_cluster_mean_color(image, clusters_mask)
