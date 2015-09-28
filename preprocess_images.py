@@ -69,8 +69,8 @@ def build_clusters_adjacency_map(clusters_mask):
     return amap
 
 
-def significant_diff(x, y, clusters_colors, THRESHOLD):
-    return abs(clusters_colors[x] - clusters_colors[y]) > THRESHOLD
+def significant_diff(x, y, THRESHOLD):
+    return abs(x - y) > THRESHOLD
 
 
 def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
@@ -82,7 +82,7 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
 
     start_clusters = [TL, TR, BL, BR]
     while start_clusters:
-        meta_cluster = [] 
+        meta_cluster = set()
         start_cluster = start_clusters.pop(0)  
         processing = [start_cluster]
         visited = set()        
@@ -91,8 +91,8 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
             curr_cluster = processing.pop(0)
             visited.add(curr_cluster)
 
-            if not meta_cluster or not significant_diff(start_cluster, curr_cluster, clusters_colors, THRESHOLD):
-                meta_cluster.append(curr_cluster)
+            if not meta_cluster or not significant_diff( clusters_colors[start_cluster], clusters_colors[curr_cluster], THRESHOLD):
+                meta_cluster.add(curr_cluster)                
 
             adj_clusters = amap[curr_cluster]
             for adj_cluster in adj_clusters:
@@ -100,9 +100,19 @@ def merge_clusters(amap, clusters_mask, clusters_colors, THRESHOLD):
                     continue
                 processing.append(adj_cluster)
 
-        meta_clusters.append(list(set(meta_cluster)))
+        found = False
+        for meta_cluster_prev in meta_clusters:
+            if not meta_cluster_prev.isdisjoint(meta_cluster):
+                found = True
+                meta_cluster_prev.union(meta_cluster)
+        if not found:
+            meta_clusters.append(meta_cluster)
 
     return meta_clusters
+
+
+def get_border_from_meta_clusters(meta_clusters):
+    print(meta_clusters)
 
 
 def main():
@@ -112,13 +122,14 @@ def main():
             if os.path.exists(output_filename):
                 continue
             
-            filesize = int(os.path.getsize(IMAGES_DIR + filename) / 1024)
-            print("Image size: %s" % filesize)
-
+            filesize = int(os.path.getsize(IMAGES_DIR + filename) / 1024) 
             if filesize > 1000:
+                print("Skipping large file %s" % filename)
                 with open("big_images.txt", "a") as outp:
                     outp.write(filename + "\n")
                 continue
+
+            print("Image size: %s" % filesize)    
             
             print("\nReading the image...")
             image = color.rgb2gray(imread(IMAGES_DIR + filename))
@@ -133,7 +144,8 @@ def main():
             amap = build_clusters_adjacency_map(mask)  
             print("Merging clusters...") 
             meta_clusters = merge_clusters(amap, mask, clusters_colors, THRESHOLD)
-            print(meta_clusters)
+            print("Getting border to crop image...")
+            get_border_from_meta_clusters(meta_clusters)
 
 
 
