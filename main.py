@@ -4,6 +4,7 @@ import sys
 import csv
 import os
 import numpy as np
+import image_processors
 from skimage.io import imread, imsave
 from multiprocessing import Pool
 
@@ -30,7 +31,7 @@ class ImagesReader(object):
                           if image_name.startswith('w_') and image_name.endswith('.jpg')]
         self.image_ids.sort()
 
-    def pre_process(self, image_processor, rewrite=False):
+    def pre_process(self, image_processor, rewrite=False, threads=8):
         """
         Makes pre processing for every image in image dir using image_processor
         :param image_processor: function from ndarray RGB image NxMx3 to ndarray image
@@ -40,7 +41,7 @@ class ImagesReader(object):
         pre_processing_dir = os.path.join(os.path.abspath(PRE_PROCESSING_DIR), processor_name)
         if not os.path.exists(pre_processing_dir):
             os.makedirs(pre_processing_dir)
-        process_pool = Pool(8)
+        process_pool = Pool(threads)
         futures = []
         for idx, image_id in enumerate(self.image_ids):
             out_image_file = os.path.join(pre_processing_dir, 'w_' + str(image_id) + '.jpg')
@@ -100,15 +101,11 @@ def write_submission(whale_types, image_ids_whale_probabilities, submission_file
         writer.writerow(['w_' + str(image_id) + '.jpg'] + list(whale_probabilities))
 
 
-def identity(x):
-    return x
-
-
 def main():
     with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'wb') as submission_file:
         image_ids_whale_ids, whale_types = read_train(train_data_file)
         images_reader = ImagesReader(IMAGES_DIR)
-        images_reader.pre_process(identity, rewrite=True)
+        images_reader.pre_process(image_processors.region_filter_crop, rewrite=False, threads=2)
 
         # TODO replace random submission to a normal one
         train_image_ids = set(image_ids_whale_ids[:, 0])
