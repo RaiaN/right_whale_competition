@@ -30,6 +30,11 @@ def region_filter_crop(rgbImage):
     eroded_mask = erosion(yen_mask(rgbImage), rectangle(20, 20))
     biggest_region = max(regionprops(label(eroded_mask)), key=lambda x: x.area)
     
+    regions = list(regionprops(label(eroded_mask)))
+    if len(regions) == 0:
+        return rgbImage
+    biggest_region = max(regions, key=lambda x: x.area)
+
     minr, minc, maxr, maxc = biggest_region.bbox
     rgbImage = rgbImage[minr:maxr, minc:maxc, :]
     return rgbImage
