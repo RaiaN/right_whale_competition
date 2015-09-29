@@ -6,6 +6,7 @@ from skimage.measure import regionprops, label
 from skimage.morphology import rectangle
 from skimage import color, filter, segmentation
 from skimage.morphology import erosion
+from skimage import transform
 import numpy as np
 
 
@@ -21,8 +22,7 @@ def rag_mean_colour(img):
 
 
 def region_filter_crop(rgbImage):
-    if rgbImage.shape[0] > 1000 and rgbImage.shape[1] > 1000:
-        rgbImage = downscale_local_mean(rgbImage, )
+    rgbImage = transform.resize(rgbImage, (1000, 1000))
     eroded_mask = erosion(yen_mask(rgbImage), rectangle(20, 20))
 
     biggest_region = max(regionprops(label(eroded_mask)), key=lambda x: x.area)
@@ -32,7 +32,8 @@ def region_filter_crop(rgbImage):
 
 
 def gray_and_downscale(rgbImage):
-    return downscale_local_mean(color.rgb2gray(rgbImage), (256, 256))
+    downscaled = transform.resize(color.rgb2gray(rgbImage), (150, 150))
+    return downscaled
 
 
 def region_crop_gray_downscale(rgmImage):
