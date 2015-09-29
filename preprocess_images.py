@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-import Image
 import numpy as np
 import os
-from skimage.io import imread, imsave
-from skimage import color, img_as_float
-from skimage.segmentation import slic, find_boundaries
-from matplotlib import pyplot as pl
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
+from skimage.io import imread, imsave
+from skimage import color, img_as_float
+from skimage.filters import sobel, rank
+from skimage.transform import seam_carve
 
 IMAGES_DIR = "imgs/"
 OUTPUT_DIR = "filtered/"
-CLUSTERS = 16
+CLUSTERS = 6
 
 def calc_cluster_mean_color(img, clusters_mask):
     clusters_colors = [0] * (CLUSTERS+1)
@@ -20,7 +20,7 @@ def calc_cluster_mean_color(img, clusters_mask):
 
     for row_ind, row in enumerate(clusters_mask):
         for col_ind, cluster_id in enumerate(row):
-            clusters_colors[cluster_id] += sum(img[row_ind][col_ind])
+            clusters_colors[cluster_id] += img[row_ind][col_ind]
             cluster_size[cluster_id] += 1
 
     for cluster_id in range(CLUSTERS):
@@ -127,14 +127,14 @@ def main():
             
             filesize = int(os.path.getsize(IMAGES_DIR + filename) / 1024) 
             if filesize > 1000:
-                print("Skipping large file %s" % filename)
+                print("\nSkipping large file %s" % filename)
                 with open("big_images.txt", "a") as outp:
                     outp.write(filename + "\n")
                 continue
 
-            print("\nImage size: %s Kb" % filesize)    
-            
+            print("\nImage size: %s Kb" % filesize) 
             print("Reading the image %s..." % filename)
+            
             image = imread(IMAGES_DIR + filename)
             print("Kmeans...")
             clusters_mask = slic(image, n_segments=CLUSTERS, multichannel=False)
