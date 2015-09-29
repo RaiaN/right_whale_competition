@@ -134,22 +134,21 @@ def main():
 
             print("\nImage size: %s Kb" % filesize) 
             print("Reading the image %s..." % filename)
-            image = img_as_float(color.rgb2gray(imread(IMAGES_DIR + filename)))
-            eimg = sobel(image)
-            out = seam_carve(image, eimg, 'vertical', 200)
+            
+            image = imread(IMAGES_DIR + filename)
+            print("Kmeans...")
+            clusters_mask = slic(image, n_segments=CLUSTERS, multichannel=False)
 
-            imsave(output_filename, out)
-            # print("Kmeans...")
-            # print("Calculating clusters mean color...")
-            # clusters_colors = calc_cluster_mean_color(image, clusters_mask)
-            # print("Building clusters adjacency map...")        
-            # amap = build_clusters_adjacency_map(clusters_mask)  
-            # print("Merging clusters...") 
-            # meta_clusters = merge_clusters(amap, clusters_mask, clusters_colors)
-            # print("Recoloring the image...")
-            # recolor_image(image, clusters_mask, meta_clusters)
-            # print("Saving...")
-            # imsave(output_filename, image)
+            print("Calculating clusters mean color...")
+            clusters_colors = calc_cluster_mean_color(image, clusters_mask)
+            print("Building clusters adjacency map...")        
+            amap = build_clusters_adjacency_map(clusters_mask)  
+            print("Merging clusters...") 
+            meta_clusters = merge_clusters(amap, clusters_mask, clusters_colors)
+            print("Recoloring the image...")
+            recolor_image(image, clusters_mask, meta_clusters)
+            print("Saving...")
+            imsave(output_filename, image)
 
 
 

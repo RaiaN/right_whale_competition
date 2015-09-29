@@ -4,10 +4,19 @@ import sys
 import csv
 import os
 import numpy as np
+from skimage.io import imread, imsave
+from multiprocessing import Pool
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
 IMAGES_DIR = 'imgs'
+PRE_PROCESSING_DIR = 'pre_processing'
+
+
+def processor_wrapper(input_image_file, out_image_file, image_processor):
+    image = imread(input_image_file)
+    out_image = image_processor(image)
+    imsave(out_image_file, out_image)
 
 
 class ImagesReader(object):
@@ -21,8 +30,33 @@ class ImagesReader(object):
                           if image_name.startswith('w_') and image_name.endswith('.jpg')]
         self.image_ids.sort()
 
-    def read_image(self, image_id):
-        pass
+    def pre_process(self, image_processor, rewrite=False):
+        """
+        Makes pre processing for every image in image dir using image_processor
+        :param image_processor: function from ndarray RGB image NxMx3 to ndarray image
+        """
+        processor_name = image_processor.__name__
+        sys.stdout.write('Pre processing images with "' + processor_name + '" processor\n')
+        pre_processing_dir = os.path.join(os.path.abspath(PRE_PROCESSING_DIR), processor_name)
+        if not os.path.exists(pre_processing_dir):
+            os.makedirs(pre_processing_dir)
+        process_pool = Pool(8)
+        futures = []
+        for idx, image_id in enumerate(self.image_ids):
+            out_image_file = os.path.join(pre_processing_dir, 'w_' + str(image_id) + '.jpg')
+            if os.path.exists(out_image_file) and not rewrite:
+                continue
+            input_image_file = os.path.join(self.dir_path, 'w_' + str(image_id) + '.jpg')
+            args = [input_image_file, out_image_file, image_processor]
+            futures.append(process_pool.apply_async(processor_wrapper, args))
+
+        for idx, future in enumerate(futures):
+            sys.stdout.write('\rprocessed %d/%d' % (idx, len(futures)))
+            future.get()
+
+        process_pool.close()
+        process_pool.join()
+        sys.stdout.write('\nPre processing finished')
 
 
 def read_train(f):
@@ -66,10 +100,15 @@ def write_submission(whale_types, image_ids_whale_probabilities, submission_file
         writer.writerow(['w_' + str(image_id) + '.jpg'] + list(whale_probabilities))
 
 
+def identity(x):
+    return x
+
+
 def main():
     with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'wb') as submission_file:
         image_ids_whale_ids, whale_types = read_train(train_data_file)
         images_reader = ImagesReader(IMAGES_DIR)
+        images_reader.pre_process(identity, rewrite=True)
 
         # TODO replace random submission to a normal one
         train_image_ids = set(image_ids_whale_ids[:, 0])
