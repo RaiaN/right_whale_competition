@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from skimage.transform import downscale_local_mean
-
 __author__ = 'Alexandra Vesloguzova, Peter Leontiev, Sergey Krivohatskiy'
 from skimage.measure import regionprops, label
 from skimage.morphology import rectangle
@@ -8,8 +6,7 @@ from skimage import color, filter
 from skimage.morphology import erosion
 from skimage import transform
 from matplotlib import pyplot as plt
-
-
+from skimage.transform import downscale_local_mean
 import numpy as np
 
 
@@ -23,7 +20,6 @@ def region_filter_crop(rgbImage):
     rgbImage = rgbImage[100:-100, 100:-100]    
     rgbImage = transform.resize(rgbImage, (1000, 1000))    
     eroded_mask = erosion(yen_mask(rgbImage), rectangle(20, 20))
-    biggest_region = max(regionprops(label(eroded_mask)), key=lambda x: x.area)
     
     regions = list(regionprops(label(eroded_mask)))
     if len(regions) == 0:

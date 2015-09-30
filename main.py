@@ -7,6 +7,8 @@ import numpy as np
 import image_processors
 from skimage.io import imread, imsave
 from multiprocessing import Pool
+from sklearn.svm import SVC
+from sklearn.metrics import log_loss
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
@@ -103,17 +105,17 @@ def read_train(f):
     return np.array(image_ids_whale_ids), np.array(whale_types_list)
 
 
-def write_submission(whale_types, image_ids_whale_probabilities, submission_file):
+def write_submission(whale_types, image_ids, whale_probabilities, submission_file):
     """
     Writes image_ids_whale_probabilities to submission_file
     :param submission_file: file to write the submission to
     :param whale_types: array of whale types to be written to csv header
     :param image_ids_whale_probabilities: array of pairs image_id - whale probabilities array
     """
-    assert len(image_ids_whale_probabilities) == 6925
+    assert len(image_ids) == 6925 and len(whale_probabilities) == 6925
     writer = csv.writer(submission_file)
     writer.writerow(['Image'] + list(whale_types))
-    for image_id, whale_probabilities in image_ids_whale_probabilities:
+    for image_id, whale_probabilities in zip(image_ids, whale_probabilities):
         writer.writerow([image_name(image_id)] + list(whale_probabilities))
 
 
@@ -124,11 +126,28 @@ def main():
         images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=3)
 
         # TODO replace random submission to a normal one
-        train_image_ids = set(image_ids_whale_ids[:, 0])
-        image_ids_whale_probabilities = [(image_id, np.random.random(len(whale_types)))
-                                         for image_id in images_reader.image_ids if image_id not in train_image_ids]
+        available_idx = set(images_reader.image_ids)
+        train_image_ids = set(image_ids_whale_ids[:, 0]).intersection(available_idx)
+        result_image_ids = available_idx.difference(train_image_ids)
+        train_image_id_whale_id = dict([tuple(image_id_whale_id) for image_id_whale_id in image_ids_whale_ids])
 
-        write_submission(whale_types, image_ids_whale_probabilities, submission_file)
+        print 'Reading train data\n'
+        x_train = np.array([images_reader.read_image_vector(image_id) for image_id in train_image_ids])
+        y_train = np.array([train_image_id_whale_id[image_id] for image_id in train_image_ids])
+        clf = SVC(probability=True)
+
+        print 'Fitting\n'
+        clf.fit(x_train, y_train)
+
+        print 'Reading data\n'
+        x = np.array([images_reader.read_image_vector(image_id) for image_id in result_image_ids])
+
+        print 'Predicting\n'
+        y_predicted = clf.predict_proba(x)
+
+        print 'Writing submission\n'
+        write_submission(whale_types, result_image_ids, y_predicted, submission_file)
+
 
     return 0
 
