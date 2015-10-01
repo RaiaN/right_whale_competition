@@ -105,7 +105,7 @@ def main():
     with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'wb') as submission_file:
         image_ids_whale_ids, whale_types = read_train(train_data_file)
         images_reader = ImagesReader(IMAGES_DIR)
-        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=True, threads=1)
+        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=1)
 
         # TODO replace random submission to a normal one
         train_image_ids = set(image_ids_whale_ids[:, 0])
