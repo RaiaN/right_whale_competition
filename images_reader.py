@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 __author__ = 'Alexandra Vesloguzova, Peter Leontiev, Sergey Krivohatskiy'
 
-
+import cv2
 import os
 import numpy as np
 import sys
 from multiprocessing import Pool
 from skimage.io import imread
-from PIL import Image
-from scipy.misc import fromimage
+from skimage.exposure import histogram
+from skimage import color
 
 PRE_PROCESSING_DIR = 'pre_processing'
 
@@ -77,11 +77,14 @@ class ImagesReader(object):
             return np.zeros(150*150)     
 
         image = imread(image_name)
-        #load only blue from RGB image
+        # load only blue from RGB image
         if image.shape[-1] == 3:
-            return np.resize(image[:,:,-1], image.shape[0]*image.shape[1])
+            image = color.rgb2gray(image)
+            #return np.resize(image[:,:,-1], image.shape[0]*image.shape[1])
 
-        return np.resize(image, image.shape[0]*image.shape[1])
+        hist, _ = histogram(image)
+        return np.asarray(hist)
+        #return np.resize(image, image.shape[0]*image.shape[1])
 
     @staticmethod
     def get_image_name(image_id):

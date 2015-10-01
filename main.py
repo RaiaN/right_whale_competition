@@ -10,6 +10,7 @@ from images_reader import ImagesReader
 from skimage.io import imread, imsave
 from sklearn.svm import SVC
 from sklearn.metrics import log_loss
+from sklearn.linear_model import SGDClassifier
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
@@ -36,11 +37,12 @@ def read_train(f):
     image_ids_whale_ids = []
 
     for image_name, whale_name in reader:
-        assert image_name.startswith('w_') and image_name.endswith('.jpg')
+        if not (image_name.startswith('w_') and image_name.endswith('.jpg')):
+            continue
         assert whale_name.startswith('whale_')
 
         image_id = ImagesReader.get_image_id(image_name)   
-        whale_id = int(whale_name.split("_")[1])        
+        whale_id = whale_name.split("_")[1]      
         whale_ids.add(whale_id)
 
         image_ids_whale_ids.append((image_id, whale_id))       
@@ -56,14 +58,16 @@ def write_submission(whale_ids, image_ids, whale_probs, submission_file):
     :param image_ids_whale_probabilities: array of pairs image_id - whale probabilities array
     """
     assert len(image_ids) == 6925 and len(whale_probs) == 6925
-    writer = csv.writer(submission_file)
-    writer.writerow(['Image'] + list(whale_ids))
+
+    submission_file.write(",".join(["Image"] + list('whale_'+str(whale_id) for whale_id in sorted(whale_ids))))
+    submission_file.write("\n")
     for image_id, whale_probs in zip(image_ids, whale_probs):
-        writer.writerow([ImagesReader.get_image_name(image_id)] + list(whale_probs))
+        submission_file.write(",".join([ImagesReader.get_image_name(image_id)] + list(str(prob) for prob in whale_probs)))
+        submission_file.write("\n")
 
 
 def main():
-    with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'wb') as submission_file:
+    with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'w') as submission_file:
         image_ids_whale_ids, whale_ids = read_train(train_data_file)
 
         images_reader = ImagesReader(IMAGES_DIR)
@@ -81,12 +85,13 @@ def main():
         x_train = np.array([images_reader.read_image_vector(image_id) for image_id in all_train_images_ids])
         y_train = np.array([train_image_id_whale_id[image_id] for image_id in all_train_images_ids])
          
-        clf = SVC(probability=True)
+        #clf = SVC(probability=True)
+        clf = SGDClassifier(loss='log', n_jobs=-1)
          
         print('Fitting\n')
         clf.fit(x_train, y_train)
  
-        print('Reading data\n')
+        print('Reading test data\n')
         x_test = np.array([images_reader.read_image_vector(image_id) for image_id in result_images_ids])
  
         print('Predicting\n')
