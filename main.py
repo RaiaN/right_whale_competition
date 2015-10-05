@@ -10,17 +10,13 @@ from images_reader import ImagesReader
 from skimage.io import imread, imsave
 from sklearn.svm import SVC
 from sklearn.metrics import log_loss
-from sklearn.linear_model import SGDClassifier
+import xgboost as xgb
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
 IMAGES_DIR = 'imgs'
 
-
-def processor_wrapper(input_image_file, out_image_file, image_processor):
-    image = imread(input_image_file)
-    out_image = image_processor(image)
-    imsave(out_image_file, out_image)
 
 def read_train(f):
     """
@@ -71,7 +67,7 @@ def main():
         image_ids_whale_ids, whale_ids = read_train(train_data_file)
 
         images_reader = ImagesReader(IMAGES_DIR)
-        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=3)
+        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=1)
 
         all_train_images_ids = image_ids_whale_ids[:, 0]
         unique_train_images_ids = set(all_train_images_ids)
@@ -82,17 +78,23 @@ def main():
         train_image_id_whale_id = dict(image_ids_whale_ids)        
 
         print('Reading train data\n')
-        x_train = np.array([images_reader.read_image_vector(image_id) for image_id in all_train_images_ids])
-        y_train = np.array([train_image_id_whale_id[image_id] for image_id in all_train_images_ids])
+        x_train = np.asarray([images_reader.read_image_vector(image_id, pid) 
+                              for pid, image_id in enumerate(all_train_images_ids)])
+        y_train = np.asarray([train_image_id_whale_id[image_id] for image_id in all_train_images_ids])
          
         #clf = SVC(probability=True)
-        clf = SGDClassifier(loss='log', n_jobs=-1)
-         
+        # #clf = SGDClassifier(loss='modified_huber', n_jobs=-1)
+
+        #clf = GradientBoostingClassifier()   
+        clf = RandomForestClassifier(n_estimators=1000)        
+        
         print('Fitting\n')
-        clf.fit(x_train, y_train)
- 
+        clf.fit(x_train, y_train) 
+        
         print('Reading test data\n')
-        x_test = np.array([images_reader.read_image_vector(image_id) for image_id in result_images_ids])
+        processed = 0
+        x_test = np.array([images_reader.read_image_vector(image_id, pid) 
+                           for pid, image_id in enumerate(result_images_ids)])
  
         print('Predicting\n')
         y_predicted = clf.predict_proba(x_test)

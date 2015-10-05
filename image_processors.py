@@ -5,6 +5,7 @@ from skimage.morphology import rectangle
 from skimage import color, filter
 from skimage.morphology import erosion
 from skimage import transform
+from skimage.exposure import adjust_gamma, adjust_log, equalize_adapthist
 from matplotlib import pyplot as plt
 from skimage.transform import downscale_local_mean
 import numpy as np
@@ -38,3 +39,6 @@ def gray_and_downscale(rgbImage):
 
 def region_crop_gray_downscale(rgmImage):
     return gray_and_downscale(region_filter_crop(rgmImage))
+
+def adjust_gamma_down_scale(rgbImage):
+    return transform.resize(equalize_adapthist(rgbImage), (150, 150))

@@ -5,12 +5,23 @@ import cv2
 import os
 import numpy as np
 import sys
+from matplotlib import pyplot as pl
 from multiprocessing import Pool
-from skimage.io import imread
-from skimage.exposure import histogram
+from skimage.io import imread, imsave
+from skimage.measure import regionprops, label
+from skimage.exposure import adjust_gamma
+from skimage.feature import blob_log, blob_doh, blob_dog
+from skimage.morphology import erosion, disk
+from skimage import color, filters
 from skimage import color
 
 PRE_PROCESSING_DIR = 'pre_processing'
+
+
+def processor_wrapper(input_image_file, out_image_file, image_processor):
+    image = imread(input_image_file)
+    out_image = image_processor(image)
+    imsave(out_image_file, out_image)
 
 
 class ImagesReader(object):
@@ -63,28 +74,25 @@ class ImagesReader(object):
         sys.stdout.write('\nPre processing finished\n')
         self.pre_processed_with = processor_name
 
-    def read_image_vector(self, image_id):
+    def read_image_vector(self, image_id, processed):
         """
         Takes image ID, reads correspoding image and returns it as 1D vector
         """
         if self.pre_processed_with is None:
             raise RuntimeError('Pre processing should be called first')
 
-
-        image_name = os.path.join(self.pre_processor_dir(self.pre_processed_with), self.get_image_name(image_id))    
-        if not os.path.exists(image_name):
-            print("Training image %s does not exist..." % image_name)
-            return np.zeros(150*150)     
-
+        image_name = os.path.join(self.pre_processor_dir(self.pre_processed_with), self.get_image_name(image_id))
         image = imread(image_name)
-        # load only blue from RGB image
+
+        #load only blue from RGB image
         if image.shape[-1] == 3:
             image = color.rgb2gray(image)
-            #return np.resize(image[:,:,-1], image.shape[0]*image.shape[1])
 
-        hist, _ = histogram(image)
-        return np.asarray(hist)
-        #return np.resize(image, image.shape[0]*image.shape[1])
+        if processed % 100 == 0:
+            print("Processed %s" % processed)
+
+        #return image
+        return np.resize(image, image.shape[0]*image.shape[1])
 
     @staticmethod
     def get_image_name(image_id):
@@ -96,5 +104,5 @@ class ImagesReader(object):
 
     @staticmethod
     def get_image_id(image_name):
-        return int(image_name.split("_")[1].split(".")[0])
+        return image_name.split("_")[1].split(".")[0]
         
