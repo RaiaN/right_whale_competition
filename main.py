@@ -67,7 +67,7 @@ def main():
         image_ids_whale_ids, whale_ids = read_train(train_data_file)
 
         images_reader = ImagesReader(IMAGES_DIR)
-        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=1)
+        images_reader.pre_process(image_processors.CANNY, rewrite=False, threads=1)
 
         all_train_images_ids = image_ids_whale_ids[:, 0]
         unique_train_images_ids = set(all_train_images_ids)
@@ -82,11 +82,11 @@ def main():
                               for pid, image_id in enumerate(all_train_images_ids)])
         y_train = np.asarray([train_image_id_whale_id[image_id] for image_id in all_train_images_ids])
          
-        #clf = SVC(probability=True)
+        clf = SVC(probability=True)
         # #clf = SGDClassifier(loss='modified_huber', n_jobs=-1)
 
         #clf = GradientBoostingClassifier()   
-        clf = ExtraTreesClassifier(n_estimators=1000, max_features=128, n_jobs=os.cpu_count(), random_state=0)
+        #clf = ExtraTreesClassifier(n_estimators=32, max_features=16, n_jobs=os.cpu_count(), random_state=0)
         
         print('Fitting\n')
         clf.fit(x_train, y_train) 
