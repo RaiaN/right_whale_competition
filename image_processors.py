@@ -60,6 +60,8 @@ def CANNY(rgbImage):
     biggest_region = max(regions, key=lambda x: x.area)
 
     minr, minc, maxr, maxc = biggest_region.bbox
-    image = image[minr:maxr, minc:maxc]       
+    image = image[minr:maxr, minc:maxc]   
+
+    image = transform.resize(image, (100, 100))    
 
     return image
