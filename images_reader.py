@@ -1,19 +1,12 @@
 #!/usr/bin/env python
 __author__ = 'Alexandra Vesloguzova, Peter Leontiev, Sergey Krivohatskiy'
 
-import cv2
 import os
 import numpy as np
 import sys
-from matplotlib import pyplot as pl
 from multiprocessing import Pool
-from skimage.io import imread, imsave
-from skimage.measure import regionprops, label
-from skimage.exposure import adjust_gamma
-from skimage.feature import blob_log, blob_doh, blob_dog
-from skimage.morphology import erosion, disk
+from skimage.io import imread
 from skimage import color, filters
-from skimage import color
 
 PRE_PROCESSING_DIR = 'pre_processing'
 
@@ -88,10 +81,12 @@ class ImagesReader(object):
         if image.shape[-1] == 3:
             image = color.rgb2gray(image)
 
+        #hist, _ = histogram(image)
+
         if processed % 100 == 0:
             print("Processed %s" % processed)
 
-        #return image
+        #return hist
         return np.resize(image, image.shape[0]*image.shape[1])
 
     @staticmethod

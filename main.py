@@ -11,7 +11,7 @@ from skimage.io import imread, imsave
 from sklearn.svm import SVC
 from sklearn.metrics import log_loss
 import xgboost as xgb
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
@@ -86,7 +86,7 @@ def main():
         # #clf = SGDClassifier(loss='modified_huber', n_jobs=-1)
 
         #clf = GradientBoostingClassifier()   
-        clf = RandomForestClassifier(n_estimators=1000)        
+        clf = ExtraTreesClassifier(n_estimators=1000, max_features=128, n_jobs=os.cpu_count(), random_state=0)
         
         print('Fitting\n')
         clf.fit(x_train, y_train) 
