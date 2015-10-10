@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 __author__ = 'Alexandra Vesloguzova, Peter Leontiev, Sergey Krivohatskiy'
-from skimage.measure import regionprops, label
-from skimage.morphology import erosion, rectangle
 from skimage import color, filters
 from skimage import transform
-from matplotlib import pyplot as plt
-from skimage.transform import downscale_local_mean
 from skimage.feature import canny
 import numpy as np
+from skimage.filters import median
+from skimage.measure import regionprops, label
+from skimage.morphology import disk
+from skimage.morphology import erosion, rectangle
 
 
 def yen_mask(rgbImage):
@@ -65,3 +65,19 @@ def CANNY(rgbImage):
     image = transform.resize(image, (100, 100))    
 
     return image
+
+
+def color_based_crop(test_image):
+
+    median_ = np.median(test_image[:, :, 0], axis=(0, 1))
+
+    test_image_med = median(test_image[:, :, 0], disk(10))
+    test_image_treshold = (test_image_med[:, :] > (median_ + 10)) & (test_image[:, :, 0] < 180)
+    eroded_thr = erosion(test_image_treshold, rectangle(5, 5))
+    regions = list(regionprops(label(1 - eroded_thr)))
+    if len(regions) != 0:
+        biggest_region = max(regions, key=lambda x: x.area)
+        minr, minc, maxr, maxc = biggest_region.bbox
+        test_image = test_image[minr:maxr, minc:maxc, :]
+
+    return transform.resize(color.rgb2gray(test_image), (100, 100))

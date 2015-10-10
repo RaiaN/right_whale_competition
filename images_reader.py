@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from skimage import color
+
 __author__ = 'Alexandra Vesloguzova, Peter Leontiev, Sergey Krivohatskiy'
 
 import os
@@ -9,8 +11,6 @@ from multiprocessing import Pool
 from skimage.io import imread, imsave
 from skimage.feature import canny
 from skimage.measure import regionprops, label
-from skimage.segmentation import mark_boundaries
-from skimage import color, filters
 
 PRE_PROCESSING_DIR = 'pre_processing'
 
@@ -71,7 +71,7 @@ class ImagesReader(object):
         sys.stdout.write('\nPre processing finished\n')
         self.pre_processed_with = processor_name
 
-    def read_image_vector(self, image_id, processed):
+    def read_image_vector(self, image_id):
         """
         Takes image ID, reads correspoding image and returns it as 1D vector
         """
@@ -83,28 +83,10 @@ class ImagesReader(object):
 
         #load only blue from RGB image
         if image.shape[-1] == 3:
-            image = color.rgb2gray(image)        
+            image = color.rgb2gray(image)
 
-        edges_mask = canny(image)
-        #image = mark_boundaries(image, edges_mask)
-        image[edges_mask] = 0.0
-        val = filters.threshold_yen(image)
-        mask = image <= val
-
-        regions = list(regionprops(label(mask)))
-        if len(regions) == 0:
-            return image
-        biggest_region = max(regions, key=lambda x: x.area)
-
-        minr, minc, maxr, maxc = biggest_region.bbox
-        image = image[minr:maxr, minc:maxc]       
-
-        #imsave("TEST/" + self.get_image_name(image_id), image)
-
-        if processed % 100 == 0:
-            print("Processed %s" % processed)
-
-        return np.ravel(np.resize(image, (50,50)))
+        #return image
+        return np.resize(image, image.shape[0]*image.shape[1])
 
     @staticmethod
     def get_image_name(image_id):
