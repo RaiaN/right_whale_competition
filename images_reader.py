@@ -11,6 +11,7 @@ from multiprocessing import Pool
 from skimage.io import imread, imsave
 from skimage.feature import canny
 from skimage.measure import regionprops, label
+from skimage import transform	
 
 PRE_PROCESSING_DIR = 'pre_processing'
 
@@ -81,12 +82,10 @@ class ImagesReader(object):
         image_name = os.path.join(self.pre_processor_dir(self.pre_processed_with), self.get_image_name(image_id))
         image = imread(image_name)
 
-        #load only blue from RGB image
         if image.shape[-1] == 3:
             image = color.rgb2gray(image)
 
-        #return image
-        return np.resize(image, image.shape[0]*image.shape[1])
+        return transform.rescale(image, 0.12)
 
     @staticmethod
     def get_image_name(image_id):

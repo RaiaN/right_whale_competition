@@ -6,7 +6,7 @@ import numpy as np
 import image_processors
 from images_reader import ImagesReader
 from sklearn.svm import SVC
-#import theano
+import simple_cnn
 
 TRAIN_FILENAME = 'train.csv'
 SUBMISSION_FILENAME = 'submission.csv'
@@ -58,11 +58,11 @@ def write_submission(whale_ids, image_ids, whale_probs, submission_file):
 
 
 def main():
-    with open(TRAIN_FILENAME) as train_data_file, open(SUBMISSION_FILENAME, 'w') as submission_file:
+    with open(TRAIN_FILENAME) as train_data_file:
         image_ids_whale_ids, whale_ids = read_train(train_data_file)
 
         images_reader = ImagesReader(IMAGES_DIR)
-        images_reader.pre_process(image_processors.color_based_crop, rewrite=False, threads=3)
+        images_reader.pre_process(image_processors.region_crop_gray_downscale, rewrite=False, threads=1)
 
         all_train_images_ids = image_ids_whale_ids[:, 0]
         unique_train_images_ids = set(all_train_images_ids)
@@ -75,22 +75,26 @@ def main():
         x_train = np.asarray([images_reader.read_image_vector(image_id)
                               for image_id in all_train_images_ids])
         y_train = np.asarray([train_image_id_whale_id[image_id] for image_id in all_train_images_ids])
-         
-        clf = SVC(probability=True)
-        
+
+        features_cnt = len(x_train[0])
+        num_targets = len(set(y_train))
+        clf = simple_cnn.CNN(features_cnt, num_targets)
+        # clf = SVC(probability=True)
+
         print('Fitting\n')
-        clf.fit(x_train, y_train) 
-        
+        clf.fit(x_train, y_train)
+
         print('Reading test data\n')
         x_test = np.array([images_reader.read_image_vector(image_id)
                            for image_id in result_images_ids])
- 
+
         print('Predicting\n')
         y_predicted = clf.predict_proba(x_test)
 
         print('Writing submission')
-        write_submission(whale_ids, result_images_ids, y_predicted, submission_file)
 
+    with open(SUBMISSION_FILENAME, 'w') as submission_file:
+        write_submission(whale_ids, result_images_ids, y_predicted, submission_file)
 
     return 0
 
