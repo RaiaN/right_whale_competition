@@ -16,11 +16,11 @@ class CNN:
         self.num_targets = num_targets
         self.filename_to_dump = filename_to_dump
     
-    @staticmethod
-    def dump_network_weights(network, training_history, cnn=None):
-        network.save_params_to(cnn.filename_to_dump)
+    
+    def dump_network_weights(self, network, training_history):
+        network.save_params_to(self.filename_to_dump)
         
-    def _build(self):
+    def _build(self, num_epochs):
         return NeuralNet\
         (
             layers=[('input', layers.InputLayer),
@@ -43,12 +43,12 @@ class CNN:
             verbose=1,
 
             use_label_encoder=True,
-            on_epoch_finished=CNN.dump_network_weights(cnn=self),
+            on_epoch_finished=[self.dump_network_weights],
         )
         
 
     def build(self, num_epochs=10):
-        self.network = _build()
+        self.network = self._build(num_epochs)
         
         if os.path.exists(self.filename_to_dump):
             try:
@@ -56,7 +56,7 @@ class CNN:
             except:
                 print("Cannot load network params due to errors")
                 print("Initializing clean network...")
-                self.network = _build()
+                self.network = self._build(num_epochs)
         
 
     def fit(self, x_train, y_train):
