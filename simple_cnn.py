@@ -47,10 +47,10 @@ class CNN:
         )
         
 
-    def build(self, num_epochs=10):
+    def build(self, num_epochs=10, fresh_start=False):
         self.network = self._build(num_epochs)
         
-        if os.path.exists(self.filename_to_dump):
+        if not fresh_start and os.path.exists(self.filename_to_dump):
             try:
                 self.network.load_params_from(self.filename_to_dump)
             except:
@@ -59,8 +59,8 @@ class CNN:
                 self.network = self._build(num_epochs)
         
 
-    def fit(self, x_train, y_train):
-        self.build()
+    def fit(self, x_train, y_train, fresh_start=False):
+        self.build(fresh_start=fresh_start)
 
         x_train = x_train[:, np.newaxis]
         self.network.fit(x_train, y_train)

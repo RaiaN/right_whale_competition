@@ -82,7 +82,7 @@ def main():
         # clf = SVC(probability=True)
 
         print('Fitting\n')
-        clf.fit(x_train, y_train)
+        clf.fit(x_train, y_train, fresh_start=False)
 
         print('Reading test data\n')
         x_test = np.array([images_reader.read_image_vector(image_id)
