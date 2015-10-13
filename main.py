@@ -78,11 +78,15 @@ def main():
 
         features_cnt = len(x_train[0])
         num_targets = len(set(y_train))
-        clf = simple_cnn.CNN(features_cnt, num_targets)
+        clf = simple_cnn.CNN(features_cnt, num_targets, 
+                             num_epochs=10,
+                             fresh_start=False,
+                             dump_dir="network_weights/",
+                             filename_to_dump="net.w")
         # clf = SVC(probability=True)
 
         print('Fitting\n')
-        clf.fit(x_train, y_train, fresh_start=False)
+        clf.fit(x_train, y_train)
 
         print('Reading test data\n')
         x_test = np.array([images_reader.read_image_vector(image_id)
