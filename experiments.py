@@ -95,8 +95,7 @@ def get_binary_clfs_by_pickle():
 
 def predict_worker(q, binary_clfs, image_filename, x):
     print("Start processing %s" % image_filename)
-    probs = [clf.predict_proba(x)[0][0] for _, clf in binary_clfs.items()]
-    q.put((image_filename, probs))
+    q.put((image_filename, [clf.predict_proba(x)[0][0] for clf in binary_clfs]))
 
 
 def write_sub_sub(results):
@@ -105,22 +104,26 @@ def write_sub_sub(results):
             outp.write(test_image + "," + ",".join(str(val) for val in probs) + "\n")
 
 
-def store(q):
+def store(q, total):
     print(datetime.datetime.now())
+    
     results = []
-    while True:
-        res = q.get()
-        if res is None:
-            break
-        results.append(res)
+    cnt = 0
+
+    while cnt < total:
+        res = q.get()        
+        results.append(res)  
+        cnt += 1
+        
         if len(results) == 50:
             print(datetime.datetime.now())
             print("Writing sub sub...")            
-            write_sub_sub(results)
+            write_sub_sub(results)            
             results = []
     
     print(datetime.datetime.now())
     write_sub_sub(results)
+
 
 def main():
     try:
@@ -146,26 +149,41 @@ def main():
 
     binary_clfs = get_binary_clfs_by_pickle()
     whale_classes = ("whale_%s" % whale_id for whale_id in binary_clfs.keys())
-    with open("submission.csv", "w") as outp:
-        outp.write("Image," + ",".join(whale_classes) + "\n")    
 
-    print("Reading test images...")
-    tasks = []    
-   
+    processed = []
+    with open("submission.csv", "r") as outp:
+        next(outp)
+        processed = [line.split(",")[0] for line in outp]
+
+    if not processed:
+        with open("submission.csv", "w") as outp:
+            outp.write("Image," + ",".join(whale_classes) + "\n")    
+
     q = multiprocessing.Manager().Queue()    
-    pool = multiprocessing.Pool(processes=3)  
-    pool.apply_async(store, args=(q,)) 
+    pool = multiprocessing.Pool(processes=4)      
 
-    for image_filename in test_images:
+    clfs = binary_clfs.values()
+    del binary_clfs
+   
+    to_be_processed = test_images.difference(processed)    
+    len_tbp = len(to_be_processed) 
+    print("Will be processed %s" % len_tbp)
+    print("Reading test images...")   
+
+    actual_job_size = min(100, len_tbp)
+    print("Job size %s" % actual_job_size)    
+
+    pool.apply_async(store, args=(q, actual_job_size))
+
+    for image_filename in list(to_be_processed)[:actual_job_size]:
         image = imread(os.path.join("pre_processing/region_crop_gray_downscale/", image_filename))
         if image.shape[-1] == 3:
             image = color.rgb2gray(image)
-        tasks.append(pool.apply_async(predict_worker, args=(q, binary_clfs, image_filename, image.ravel())))   
+        pool.apply_async(predict_worker, args=(q, clfs, image_filename, image.ravel()))
 
     print("Predicting...")
-    for task in tasks:
-        task.get()
-    q.put(None) # finish 
+    pool.close()
+    pool.join()
     
     print("Done!")
 
